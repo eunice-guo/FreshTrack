@@ -2,6 +2,13 @@
 Initialize database with sample food shelf life data
 Based on common Chinese and international foods
 """
+import sys
+import io
+
+# Fix encoding for Windows console
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
 from sqlalchemy.orm import Session
 from database import SessionLocal, init_db
 from models import FoodShelfLife
