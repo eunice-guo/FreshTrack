@@ -14,9 +14,27 @@ class ReceiptOCRService:
     """Service for processing receipt images and extracting food items"""
 
     def __init__(self):
-        # Configure Tesseract path if needed (Windows)
-        # pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-        pass
+        # Configure Tesseract path for Windows
+        import sys
+        import os
+
+        if sys.platform == 'win32':
+            # Try common installation paths
+            possible_paths = [
+                r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+                r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
+                r'C:\Tesseract-OCR\tesseract.exe',
+            ]
+
+            for path in possible_paths:
+                if os.path.exists(path):
+                    pytesseract.pytesseract.tesseract_cmd = path
+                    print(f"✅ Found Tesseract at: {path}")
+                    break
+            else:
+                print("⚠️  Warning: Tesseract not found in common paths.")
+                print("   Please install from: https://github.com/UB-Mannheim/tesseract/wiki")
+                print("   Or set the path manually in ocr_service.py")
 
     def preprocess_image(self, image_path: str) -> np.ndarray:
         """
