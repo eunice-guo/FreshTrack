@@ -510,6 +510,139 @@ async def get_user_stats(user_id: int, db: Session = Depends(get_db)):
     }
 
 
+# ==================== RECEIPT UPLOAD ENDPOINT ====================
+
+@app.post("/api/receipt/upload/{user_id}")
+async def upload_receipt(
+    user_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Upload receipt image and extract food items using OCR
+
+    Args:
+        user_id: User ID
+        file: Receipt image file
+        db: Database session
+
+    Returns:
+        List of added food items
+    """
+    # Verify user exists
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Validate file type
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    try:
+        # Save uploaded file temporarily
+        import tempfile
+        import shutil
+        from ocr_service import ReceiptOCRService
+
+        # Create temp file
+        suffix = os.path.splitext(file.filename)[1] if file.filename else '.jpg'
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+            shutil.copyfileobj(file.file, temp_file)
+            temp_path = temp_file.name
+
+        # Process receipt with OCR
+        ocr_service = ReceiptOCRService()
+        extracted_items = ocr_service.process_receipt_image(temp_path)
+
+        # Clean up temp file
+        os.unlink(temp_path)
+
+        # Add items to database with estimated expiration dates
+        added_items = []
+        for item_data in extracted_items:
+            # Get shelf life for this food
+            shelf_life_days = get_shelf_life_for_item(
+                item_data['name'],
+                item_data['category'],
+                db
+            )
+
+            # Calculate expiration date
+            purchase_date = datetime.now()
+            expiration_date = purchase_date + timedelta(days=shelf_life_days)
+
+            # Create food item
+            food_item = FoodItem(
+                user_id=user_id,
+                food_name=item_data['name'],
+                category=item_data['category'],
+                purchase_date=purchase_date,
+                expiration_date=expiration_date,
+                quantity=item_data['quantity'],
+                price=item_data.get('total_price'),
+                storage_location='refrigerator'
+            )
+
+            db.add(food_item)
+            added_items.append({
+                'name': item_data['name'],
+                'category': item_data['category'],
+                'quantity': item_data['quantity'],
+                'expiration_date': expiration_date.isoformat(),
+                'days_until_expiry': shelf_life_days
+            })
+
+        db.commit()
+
+        return {
+            "success": True,
+            "items_added": len(added_items),
+            "items": added_items
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process receipt: {str(e)}"
+        )
+
+
+def get_shelf_life_for_item(food_name: str, category: str, db: Session) -> int:
+    """
+    Get estimated shelf life for a food item
+
+    Args:
+        food_name: Name of the food
+        category: Food category
+        db: Database session
+
+    Returns:
+        Estimated shelf life in days
+    """
+    # Try to find in database
+    shelf_life = db.query(FoodShelfLife).filter(
+        FoodShelfLife.food_name_cn.ilike(f"%{food_name}%")
+    ).first()
+
+    if shelf_life and shelf_life.refrigerator_max:
+        return shelf_life.refrigerator_max
+
+    # Default shelf life by category (refrigerated)
+    default_shelf_life = {
+        '乳制品': 7,      # Dairy - 1 week
+        '蔬菜': 5,        # Vegetables - 5 days
+        '水果': 7,        # Fruits - 1 week
+        '肉类': 3,        # Meat - 3 days (raw)
+        '蛋类': 21,       # Eggs - 3 weeks
+        '调味品': 180,    # Condiments - 6 months
+        '豆制品': 5,      # Tofu products - 5 days
+        '主食': 90,       # Staples - 3 months
+        '其他': 7         # Other - 1 week
+    }
+
+    return default_shelf_life.get(category, 7)
+
+
 # Run the application
 if __name__ == "__main__":
     import uvicorn

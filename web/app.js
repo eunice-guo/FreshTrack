@@ -501,3 +501,156 @@ function formatExpiry(expirationDate, daysLeft) {
         return `${dateStr} (还剩 ${daysLeft} 天)`;
     }
 }
+
+// Receipt Upload Functions
+let selectedFile = null;
+
+// Handle file selection
+document.addEventListener('DOMContentLoaded', () => {
+    const fileInput = document.getElementById('receiptFile');
+    const uploadArea = document.getElementById('uploadArea');
+
+    if (fileInput) {
+        fileInput.addEventListener('change', handleFileSelect);
+    }
+
+    if (uploadArea) {
+        // Drag and drop handlers
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragging');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragging');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragging');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+    }
+});
+
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+        handleFile(file);
+    }
+}
+
+function handleFile(file) {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        showToast('请上传图片文件（JPG, PNG）', 'error');
+        return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+        showToast('图片文件不能超过 10MB', 'error');
+        return;
+    }
+
+    selectedFile = file;
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById('receiptPreview').src = e.target.result;
+        document.getElementById('uploadArea').style.display = 'none';
+        document.getElementById('previewSection').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+}
+
+function cancelUpload() {
+    resetUpload();
+}
+
+function resetUpload() {
+    selectedFile = null;
+    document.getElementById('receiptFile').value = '';
+    document.getElementById('uploadArea').style.display = 'block';
+    document.getElementById('previewSection').style.display = 'none';
+    document.getElementById('processingSection').style.display = 'none';
+    document.getElementById('resultsSection').style.display = 'none';
+}
+
+async function uploadReceipt() {
+    if (!selectedFile) {
+        showToast('请先选择图片', 'error');
+        return;
+    }
+
+    // Show processing UI
+    document.getElementById('previewSection').style.display = 'none';
+    document.getElementById('processingSection').style.display = 'block';
+
+    try {
+        // Create form data
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        // Upload to API
+        const response = await fetch(`${API_BASE_URL}/api/receipt/upload/${USER_ID}`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Upload failed');
+        }
+
+        const result = await response.json();
+
+        // Show results
+        displayReceiptResults(result);
+
+        showToast(`成功识别 ${result.items_added} 件食材！`, 'success');
+
+        // Refresh dashboard if on that page
+        if (currentPage === 'dashboard') {
+            loadDashboard();
+        }
+
+    } catch (error) {
+        console.error('Upload error:', error);
+        showToast('识别失败：' + error.message, 'error');
+        resetUpload();
+    }
+}
+
+function displayReceiptResults(result) {
+    // Hide processing, show results
+    document.getElementById('processingSection').style.display = 'none';
+    document.getElementById('resultsSection').style.display = 'block';
+
+    // Set summary
+    document.getElementById('resultsSummary').textContent =
+        `已成功识别并添加 ${result.items_added} 件食材到您的冰箱！`;
+
+    // Display items list
+    const resultsList = document.getElementById('resultsList');
+    resultsList.innerHTML = result.items.map(item => `
+        <div class="result-item">
+            <div class="result-item-info">
+                <div class="result-item-name">
+                    ${item.name} (${item.quantity}个)
+                </div>
+                <div class="result-item-meta">
+                    ${item.category} • 到期日期: ${new Date(item.expiration_date).toLocaleDateString('zh-CN')}
+                </div>
+            </div>
+            <div class="result-item-expiry">
+                ${item.days_until_expiry} 天
+            </div>
+        </div>
+    `).join('');
+}
