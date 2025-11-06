@@ -69,6 +69,27 @@ The API will be available at `http://localhost:8000`
 
 Visit `http://localhost:8000/docs` for interactive API documentation.
 
+### Using the Web Interface
+
+**NEW! 🌐 Web Interface Available**
+
+FreshTrack now includes a beautiful web interface! After starting the API server:
+
+```bash
+# Open the web interface
+cd web
+start index.html  # Or double-click index.html in File Explorer
+```
+
+The web interface provides:
+- 📊 **Dashboard** - Real-time statistics and urgent alerts
+- 🧊 **My Fridge** - Visual inventory with color-coded urgency
+- 🍳 **Recipes** - Smart recommendations based on available ingredients
+- 🛒 **Shopping List** - Track items to buy with reasons
+- ➕ **Add Items** - Simple form to add food to your fridge
+
+See `web/README.md` for detailed documentation.
+
 ---
 
 ## 📁 Project Structure
@@ -82,13 +103,20 @@ FreshTrack/
 │   ├── ocr_service.py          # Receipt OCR processing
 │   ├── email_monitor.py        # Email monitoring service
 │   ├── init_sample_data.py     # Sample data initialization
+│   ├── demo.py                 # Demo setup with sample data
+│   ├── test_api.py             # API testing script
 │   ├── requirements.txt        # Python dependencies
 │   ├── .env.example            # Environment variables template
 │   └── data/
 │       └── freshtrack.db       # SQLite database
-├── mobile_app/                 # (Coming soon) Flutter mobile app
+├── web/                        # Web interface (NEW!)
+│   ├── index.html              # Main HTML page
+│   ├── styles.css              # CSS styling
+│   ├── app.js                  # JavaScript logic & API calls
+│   └── README.md               # Web interface documentation
 ├── .gitignore
-└── README.md
+├── README.md
+└── QUICKSTART.md               # Quick start guide
 ```
 
 ---
