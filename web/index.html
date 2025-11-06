@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreshTrack - 智能冰箱管理</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <span class="logo">🧊</span>
+                <h1>FreshTrack</h1>
+            </div>
+            <div class="nav-menu">
+                <a href="#dashboard" class="nav-link active" data-page="dashboard">
+                    <span>📊</span> 仪表盘
+                </a>
+                <a href="#fridge" class="nav-link" data-page="fridge">
+                    <span>🧊</span> 我的冰箱
+                </a>
+                <a href="#recipes" class="nav-link" data-page="recipes">
+                    <span>🍳</span> 食谱推荐
+                </a>
+                <a href="#shopping" class="nav-link" data-page="shopping">
+                    <span>🛒</span> 购物清单
+                </a>
+                <a href="#add" class="nav-link" data-page="add">
+                    <span>➕</span> 添加食材
+                </a>
+            </div>
+            <div class="user-info">
+                <span id="userEmail">demo@freshtrack.app</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container main-content">
+        <!-- Dashboard Page -->
+        <div id="dashboard-page" class="page active">
+            <div class="page-header">
+                <h2>📊 仪表盘总览</h2>
+                <button onclick="refreshDashboard()" class="btn btn-secondary">🔄 刷新</button>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📦</div>
+                    <div class="stat-content">
+                        <h3 id="totalItems">-</h3>
+                        <p>总食材数量</p>
+                    </div>
+                </div>
+                <div class="stat-card urgent">
+                    <div class="stat-icon">⚠️</div>
+                    <div class="stat-content">
+                        <h3 id="expiringToday">-</h3>
+                        <p>今天到期</p>
+                    </div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-icon">🟡</div>
+                    <div class="stat-content">
+                        <h3 id="expiringSoon">-</h3>
+                        <p>3天内到期</p>
+                    </div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-content">
+                        <h3 id="freshItems">-</h3>
+                        <p>新鲜食材</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Urgent Items Alert -->
+            <div id="urgentAlert" class="alert alert-warning" style="display: none;">
+                <h3>⚡ 紧急提醒</h3>
+                <div id="urgentItemsList"></div>
+            </div>
+
+            <!-- Category Breakdown -->
+            <div class="card">
+                <h3>📋 食材分类统计</h3>
+                <div id="categoryChart" class="category-chart"></div>
+            </div>
+        </div>
+
+        <!-- Fridge Page -->
+        <div id="fridge-page" class="page">
+            <div class="page-header">
+                <h2>🧊 我的冰箱</h2>
+                <div class="filter-buttons">
+                    <button onclick="filterItems('all')" class="btn btn-sm active" data-filter="all">全部</button>
+                    <button onclick="filterItems('urgent')" class="btn btn-sm btn-danger" data-filter="urgent">紧急</button>
+                    <button onclick="filterItems('fresh')" class="btn btn-sm btn-success" data-filter="fresh">新鲜</button>
+                </div>
+            </div>
+
+            <div id="fridgeItems" class="food-grid">
+                <!-- Food items will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Recipes Page -->
+        <div id="recipes-page" class="page">
+            <div class="page-header">
+                <h2>🍳 食谱推荐</h2>
+                <p class="subtitle">根据您冰箱里的食材智能推荐</p>
+            </div>
+
+            <div id="recipesList" class="recipes-grid">
+                <!-- Recipes will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Shopping List Page -->
+        <div id="shopping-page" class="page">
+            <div class="page-header">
+                <h2>🛒 购物清单</h2>
+                <button onclick="showAddShoppingItemModal()" class="btn btn-primary">➕ 添加商品</button>
+            </div>
+
+            <div class="shopping-list">
+                <div id="pendingItems">
+                    <h3>待购买</h3>
+                    <div id="pendingItemsList"></div>
+                </div>
+                <div id="purchasedItems">
+                    <h3>已购买</h3>
+                    <div id="purchasedItemsList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Item Page -->
+        <div id="add-page" class="page">
+            <div class="page-header">
+                <h2>➕ 添加食材</h2>
+                <p class="subtitle">手动添加食材到冰箱</p>
+            </div>
+
+            <div class="card">
+                <form id="addItemForm" onsubmit="addFoodItem(event)">
+                    <div class="form-group">
+                        <label for="foodName">食材名称 *</label>
+                        <input type="text" id="foodName" required placeholder="例如：西红柿">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="category">分类 *</label>
+                            <select id="category" required>
+                                <option value="">选择分类</option>
+                                <option value="蔬菜">🥬 蔬菜</option>
+                                <option value="水果">🍎 水果</option>
+                                <option value="肉类">🍗 肉类</option>
+                                <option value="乳制品">🥛 乳制品</option>
+                                <option value="蛋类">🥚 蛋类</option>
+                                <option value="主食">🍚 主食</option>
+                                <option value="调味品">🧂 调味品</option>
+                                <option value="豆制品">🥢 豆制品</option>
+                                <option value="其他">📦 其他</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="quantity">数量 *</label>
+                            <input type="number" id="quantity" value="1" min="1" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="quantityUnit">单位 *</label>
+                            <select id="quantityUnit" required>
+                                <option value="个">个</option>
+                                <option value="斤">斤</option>
+                                <option value="瓶">瓶</option>
+                                <option value="袋">袋</option>
+                                <option value="盒">盒</option>
+                                <option value="根">根</option>
+                                <option value="颗">颗</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expirationDate">到期日期 *</label>
+                        <input type="date" id="expirationDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="price">价格（可选）</label>
+                        <input type="number" id="price" step="0.01" placeholder="15.90">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-large">✅ 添加到冰箱</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Shopping Item -->
+    <div id="shoppingModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>添加到购物清单</h2>
+            <form id="addShoppingForm" onsubmit="addShoppingItem(event)">
+                <div class="form-group">
+                    <label for="shoppingItemName">商品名称 *</label>
+                    <input type="text" id="shoppingItemName" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="shoppingQuantity">数量</label>
+                        <input type="number" id="shoppingQuantity" value="1" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="shoppingUnit">单位</label>
+                        <input type="text" id="shoppingUnit" placeholder="个/斤/瓶">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="shoppingReason">原因（可选）</label>
+                    <input type="text" id="shoppingReason" placeholder="例如：做番茄炒蛋需要">
+                </div>
+                <button type="submit" class="btn btn-primary btn-large">添加</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
