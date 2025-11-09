@@ -69,6 +69,26 @@ The API will be available at `http://localhost:8000`
 
 Visit `http://localhost:8000/docs` for interactive API documentation.
 
+### Quick Start with Startup Scripts
+
+For easier setup, you can use the provided startup scripts:
+
+**Windows:**
+```bash
+start_server.bat
+```
+
+**macOS/Linux:**
+```bash
+chmod +x start_server.sh
+./start_server.sh
+```
+
+These scripts will:
+- Create the data directory if needed
+- Initialize the database with sample data
+- Start the backend server on port 8000
+
 ### Using the Web Interface
 
 **NEW! 🌐 Web Interface Available**
@@ -89,6 +109,10 @@ The web interface provides:
 - ➕ **Add Items** - Simple form to add food to your fridge
 
 See `web/README.md` for detailed documentation.
+
+### Troubleshooting
+
+If you encounter connection errors (like `ERR_CONNECTION_REFUSED`) when using the web interface, see the [TROUBLESHOOTING.md](TROUBLESHOOTING.md) guide for detailed solutions.
 
 ---
 
